@@ -12,3 +12,6 @@
 *.o
 *.a
 mkmf.log
+.coditsu/local.yml
+.byebug_history
+vendor

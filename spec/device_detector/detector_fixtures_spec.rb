@@ -49,9 +49,10 @@ describe DeviceDetector do
                 end
 
                 short_name = str_or_nil(f['os']['short_name'])
-                if short_name.nil?
+                if short_name.nil? && os_family.nil?
                   assert_nil os.short_name, 'failed os short name detection'
-                else
+                end
+                unless short_name.nil?
                   assert_equal short_name, os.short_name, 'failed os short name detection'
                 end
 

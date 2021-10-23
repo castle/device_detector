@@ -46,7 +46,9 @@ class DeviceDetector
   end
 
   def device_brand
-    device.brand
+    b = device.brand
+    b = 'Apple' if b.nil? && ['tvOS', 'watchOS', 'iPadOS', 'iOS', 'Mac'].include?(os_name)
+    b
   end
 
   def device_type
@@ -59,9 +61,9 @@ class DeviceDetector
     # that won't have a detected browser, but can still be detected. So we check the useragent for
     # Chrome instead.
     if t.nil? && os.family == 'Android' && user_agent =~ build_regex('Chrome\/[\.0-9]*')
-      if user_agent =~ build_regex('Chrome\/[\.0-9]* Mobile')
+      if user_agent =~ build_regex('(?:Mobile|eliboM) Safari\/')
         t = 'smartphone'
-      elsif user_agent =~ build_regex('Chrome\/[\.0-9]* (?!Mobile)')
+      elsif user_agent =~ build_regex('(?!Mobile )Safari\/')
         t = 'tablet'
       end
     end
@@ -78,7 +80,7 @@ class DeviceDetector
     # So were are expecting that all devices running Android < 2 are
     # smartphones Devices running Android 3.X are tablets. Device type
     # of Android 2.X and 4.X+ are unknown
-    if t.nil? && os.short_name == 'AND' && os.full_version && !os.full_version.empty?
+    if t.nil? && os.name == 'Android' && os.full_version && !os.full_version.empty?
       if os.full_version < '2'
         t = 'smartphone'
       elsif os.full_version >= '3' && os.full_version < '4'
@@ -89,6 +91,9 @@ class DeviceDetector
     # All detected feature phones running android are more likely a smartphone
     t = 'smartphone' if t == 'feature phone' && os.family == 'Android'
 
+    # All unknown devices under running Java ME are more likely a features phones
+    t = 'feature phone' if t.nil? && os.name == 'Java ME'
+
     # According to http://msdn.microsoft.com/en-us/library/ie/hh920767(v=vs.85).aspx
     # Internet Explorer 10 introduces the "Touch" UA string token. If this token is present at the
     # end of the UA string, the computer has touch capability, and is running Windows 8 (or later).
@@ -97,13 +102,19 @@ class DeviceDetector
     # As most touch enabled devices are tablets and only a smaller part are desktops/notebooks we
     # assume that all Windows 8 touch devices are tablets.
     if t.nil? && touch_enabled? &&
-       (os.short_name == 'WRT' || (os.short_name == 'WIN' && os.full_version && os.full_version >= '8'))
+       (os.name == 'Windows RT' || (os.name == 'Windows' && os.full_version && os.full_version >= '8'))
       t = 'tablet'
     end
 
     t = 'tv' if opera_tv_store?
 
+    # All devices running Tizen TV or SmartTV are assumed to be a tv
+    t = 'tv' if t.nil? && user_agent =~ build_regex('SmartTV|Tizen.+ TV .+$')
+
+    # Devices running Kylo or Espital TV Browsers are assumed to be a TV
     t = 'tv' if t.nil? && ['Kylo', 'Espial TV Browser'].include?(client.name)
+
+    t = 'desktop' if desktop_fragment?
 
     # set device type to desktop for all devices running a desktop os that were
     # not detected as an other device type
@@ -168,11 +179,11 @@ class DeviceDetector
   end
 
   def android_tablet_fragment?
-    user_agent =~ build_regex('Android(?: \d.\d(?:.\d)?)?; Tablet;')
+    user_agent =~ build_regex('Android( [\.0-9]+)?; Tablet;')
   end
 
   def android_mobile_fragment?
-    user_agent =~ build_regex('Android(?: \d.\d(?:.\d)?)?; Mobile;')
+    user_agent =~ build_regex('Android( [\.0-9]+)?; Mobile;')
   end
 
   def touch_enabled?
@@ -187,12 +198,16 @@ class DeviceDetector
     user_agent =~ build_regex('Opera Tablet')
   end
 
+  def desktop_fragment?
+    user_agent =~ build_regex('Desktop (x(?:32|64)|WOW64);')
+  end
+
   # This is a workaround until we support detecting mobile only browsers
   def puffin_browser?
     client.name == 'Puffin'
   end
 
   def build_regex(src)
-    Regexp.new('(?:^|[^A-Z0-9\_\-])(?:' + src + ')', Regexp::IGNORECASE)
+    Regexp.new('(?:^|[^A-Z_-])(?:' + src + ')', Regexp::IGNORECASE)
   end
 end

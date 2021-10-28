@@ -21,7 +21,7 @@ class DeviceDetector
     end
 
     def full_version
-      raw_version = super.to_s.split('_').join('.')
+      raw_version = super.to_s.tr('_', '.').split('.').join('.')
       raw_version == '' ? nil : raw_version
     end
 

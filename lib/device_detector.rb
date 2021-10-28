@@ -81,9 +81,10 @@ class DeviceDetector
     # smartphones Devices running Android 3.X are tablets. Device type
     # of Android 2.X and 4.X+ are unknown
     if t.nil? && os.name == 'Android' && os.full_version && !os.full_version.empty?
-      if os.full_version < '2'
+      v = ::Gem::Version.new(os.full_version)
+      if ::Gem::Requirement.new('< 2.0').satisfied_by?(v)
         t = 'smartphone'
-      elsif os.full_version >= '3' && os.full_version < '4'
+      elsif ::Gem::Requirement.new('>= 3.0', '< 4.0').satisfied_by?(v)
         t = 'tablet'
       end
     end
